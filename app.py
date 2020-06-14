@@ -19,6 +19,7 @@ If there's another way do it like that
 NEED TO: 
 1. Take in input from text element in index.html
 2. Run evaluateInput() on that (probably gonna need to format user input)
+    - Now im thinking it should be an XHR post with the input, and it should get returned decoded output
 3. Update response html to display answer 
 """ 
 
@@ -38,13 +39,9 @@ from io import open
 import itertools
 import math
 import importlib.util
+from flask import request
 
 from models import *
-
-if len(sys.argv) < 2:
-    # Optionally add movie text as well (huge ass file)
-    # Must run first so all these lines get added to voc + pairs
-    from movie_text import * 
 
 from text import * 
 
@@ -247,12 +244,25 @@ def evaluateInput(encoder, decoder, searcher, voc):
             output_words = evaluate(encoder, decoder, searcher, voc, input_sentence)
             # Format and print response sentence
             output_words[:] = [x for x in output_words if not (x == 'EOS' or x == 'PAD')]
-            # print('Bot:', ' '.join(output_words))
-            # Update html here
+            print('Bot:', ' '.join(output_words))
+            
             return output_words
         except KeyError:
             print("Error: Encountered unknown word.")
 
+def evaluateInputWeb(encoder, decoder, searcher, voc, input):
+    input_sentence = ''
+    try:
+        input_sentence = input
+        # Normalize
+        input_sentence = normalizeString(input_sentence)
+        # Evaluate
+        output_word = evaluate(encoder, decoder, searcher, voc, input_sentence)
+        # Format 
+        output_words[:] = [x for x in output_words if not (x == 'EOS' or x == 'PAD')]
+        return output_words
+    except KeyError:
+        print("Unknown Word")
 
 # Initialize and build models! 
 
@@ -267,15 +277,10 @@ decoder_n_layers = 2
 dropout = 0.1
 batch_size = 64
 
-checkpoint_iter = 10000
+checkpoint_iter = 6000
 
-# Set checkpoint to load from; set to None if starting from scratch
-# If number passed into command line checkpoint will be set there 
-if len(sys.argv) < 2:
-    loadFilename = None
-else:
-    checkpoint_iter = sys.argv[1]
-    loadFilename = os.path.join(save_dir, model_name, corpus_name,
+loadFilename = None
+loadFilename = os.path.join(save_dir, model_name, corpus_name,
                            '{}-{}_{}'.format(encoder_n_layers, decoder_n_layers, hidden_size),
                            '{}_checkpoint.tar'.format(checkpoint_iter))
 
@@ -316,7 +321,7 @@ clip = 50.0
 teacher_forcing_ratio = 1.0
 learning_rate = 0.00015
 decoder_learning_ratio = 5.0
-n_iteration = 10000
+n_iteration = 6000
 print_every = 1
 save_every = 1000
 
@@ -360,12 +365,16 @@ decoder.eval()
 searcher = GreedySearchDecoder(encoder, decoder)
 
 # Begin chatting (uncomment and run the following line to begin)
-evaluateInput(encoder, decoder, searcher, voc)
+# evaluateInput(encoder, decoder, searcher, voc)
 
 
-
+# FLASK 
 
 @app.route('/')
 def hello():
     return render_template('index.html')
 
+@app.route('/api/input', methods=['POST'])
+def evaluateInputRequest():
+    ret = evaluateInputWeb(encoder, decoder, searcher, voc, request.json)
+    return ret

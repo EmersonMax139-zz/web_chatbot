@@ -1,16 +1,63 @@
 <!doctype html>
 <title>Chatbot</title>
 
+<style>
+    .center {
+        margin: 0 auto;
+    }
+
+    .flex {
+        display: flex
+    }
+
+    .flex-center {
+        justify-content: center;
+    }
+
+    .pa-md {
+        padding: 1rem;
+    }
+</style>
+
 <div class="main_container">
 
-    <h1 class="center" id="title">Chatbot</h1>
-    <input class="center" id="chat_input" />
-    <div id="respone_container">
-        {% if response %}
+    <h1 class="center pa-md" id="title">Chatbot</h1>
+    <div class="flex flex-center">
+        <input class="center" id="chat_input" />
+        <button class="inputBtn" id="btn_input" onclick="postInput()"> Post </button> 
+    </div>
+    <div id="response_container">
+        <!-- {% if response %} -->
         <p id="response">
             <span id="response_text"></span>
         </p>
-        {% endif %}
+        <!-- {% endif %} -->
     </div>
 
 </div>
+
+<script>
+    const user_input = document.getElementById('chat_input');
+    const proto = 'http';
+    const domain = 'localhost:8080';
+    
+    // Maybe some formatting/validation logic here
+    let input = user_input.value;
+
+    async function postInput() {
+        const response = await fetch(`${proto}://${domain}/api/input`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(input)
+        })
+
+        if(response) {
+            document.getElementById('response_text').innerHTML = response
+        } else {
+            console.log("Error getting response")
+        }
+    }
+</script>
+
